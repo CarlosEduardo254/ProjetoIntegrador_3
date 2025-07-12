@@ -1,0 +1,6 @@
+{
+  "name": "Planejador de Rota - Com Ruas",
+  "description": "Uma aplicação web para resolver o Problema do Caixeiro Viajante (PCV). Possui dois modos: um solucionador visual passo a passo para matrizes de adjacência usando o algoritmo de Christofides, e um planejador de rota prático que usa a API Photon para geocodificação e OSRM para roteamento (ambos baseados em dados do OpenStreetMap) para calcular a rota otimizada entre locais do mundo real.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
