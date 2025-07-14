@@ -15,21 +15,11 @@ https://carloseduardo254.github.io/ProjetoIntegrador_3/
 
 * Se o mapa não carregar corretamente tente rodar novamente a busca, pois as vezes a API está sobrecarregada
 
-Exempplo de teste a ser inserido para o Problema do Caixeiro Viajante(Basta copiar a primeira linha(número de grafos) e a matriz abaixo logo abaixo):
+Exempplo de teste maior a ser inserido para o Problema do Caixeiro Viajante(Basta copiar a primeira linha(número de grafos) e a matriz abaixo logo abaixo):
 Ex 01:
 
-7
-0 12 10 19 8 11 15
-12 0 3 7 18 5 9
-10 3 0 6 20 9 2
-19 7 6 0 11 13 4
-8 18 20 11 0 10 14
-11 5 9 13 10 0 6
-15 9 2 4 14 6 0
-
-Ex 02:
-
 29
+
 0 97 205 139 86 60 220 65 111 115 227 95 82 225 168 103 266 205 149 120 58 257 152 52 180 136 82 34 145
 97 0 129 103 71 105 258 154 112 65 204 150 87 176 137 142 204 148 148 49 41 211 226 116 197 89 153 124 74
 205 129 0 219 125 175 386 269 134 184 313 201 215 267 248 271 274 236 272 160 151 300 350 239 322 78 276 220 60
