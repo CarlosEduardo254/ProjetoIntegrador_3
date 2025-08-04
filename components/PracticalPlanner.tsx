@@ -1,41 +1,34 @@
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { getDistanceMatrixForLocations, getLocationSuggestions } from '../services/geminiService.ts';
-import { executeChristofidesAlgorithm } from '../services/christofidesService.ts';
-import type { DistanceMatrixResponse, ResultadoChristofides, Grafo, Vertice } from '../types.ts';
+import React, { useState, useEffect, useRef } from 'react';
+import { getLocationSuggestions } from '../services/locationService';
 
 interface PracticalPlannerProps {
-  setResultado: (r: ResultadoChristofides | null) => void;
-  setErro: (e: string | null) => void;
-  setIsLoading: (l: boolean) => void;
-  clearResultado: () => void;
-  setVisualizacaoAtiva: (view: string) => void;
+  locations: string[];
+  setLocations: (locs: string[]) => void;
+  fuelConsumption: string;
+  setFuelConsumption: (val: string) => void;
+  gasPrice: string;
+  setGasPrice: (val: string) => void;
+  onSolve: () => void;
+  onClear: () => void;
   isLoading: boolean;
 }
 
 export const PracticalPlanner: React.FC<PracticalPlannerProps> = ({
-  setResultado,
-  setErro,
-  setIsLoading,
-  clearResultado,
-  setVisualizacaoAtiva,
+  locations,
+  setLocations,
+  fuelConsumption,
+  setFuelConsumption,
+  gasPrice,
+  setGasPrice,
+  onSolve,
+  onClear,
   isLoading,
 }) => {
-  const [locations, setLocations] = useState<string[]>([
-    'Praia de Iracema, Fortaleza, Ceará',
-    'Mercado Central de Fortaleza, Ceará',
-    'Beach Park, Aquiraz, Ceará',
-    'Praia do Futuro, Fortaleza, Ceará',
-    'Centro Dragão do Mar de Arte e Cultura, Fortaleza, Ceará',
-    'Praia do Cumbuco, Caucaia, Ceará',
-  ]);
   const [newLocation, setNewLocation] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const suggestionContainerRef = useRef<HTMLDivElement>(null);
-
-  const [fuelConsumption, setFuelConsumption] = useState('12');
-  const [gasPrice, setGasPrice] = useState('5.50');
 
   useEffect(() => {
     if (newLocation.trim().length < 3) {
@@ -68,7 +61,6 @@ export const PracticalPlanner: React.FC<PracticalPlannerProps> = ({
   }, []);
 
   const handleSuggestionClick = (suggestion: string) => {
-    // Shorten the detailed suggestion from the API for a cleaner UI.
     const shortenedSuggestion = suggestion.split(',').slice(0, 3).join(', ');
     setNewLocation(shortenedSuggestion);
     setSuggestions([]);
@@ -85,69 +77,6 @@ export const PracticalPlanner: React.FC<PracticalPlannerProps> = ({
   const handleRemoveLocation = (index: number) => {
     setLocations(locations.filter((_, i) => i !== index));
   };
-  
-  const handleSolve = useCallback(async () => {
-    if (locations.length < 3) {
-      setErro("Adicione pelo menos 3 locais para calcular uma rota.");
-      return;
-    }
-    const consumption = parseFloat(fuelConsumption);
-    const price = parseFloat(gasPrice);
-
-    if (isNaN(consumption) || consumption <= 0 || isNaN(price) || price <= 0) {
-      setErro("Valores inválidos para consumo ou preço da gasolina. Verifique se são números positivos.");
-      return;
-    }
-
-    setIsLoading(true);
-    setErro(null);
-    setResultado(null);
-    setVisualizacaoAtiva('final');
-
-    try {
-      const apiResponse: DistanceMatrixResponse = await getDistanceMatrixForLocations(locations);
-      
-      const vertices: Vertice[] = apiResponse.locations.map((loc, i) => ({
-        id: i,
-        x: loc.lon, // Using x for longitude for projection
-        y: loc.lat,  // Using y for latitude for projection
-        nome: loc.name,
-      }));
-      
-      const costMatrix = apiResponse.distanceMatrix.map(row => 
-        row.map(distanceInKm => (distanceInKm / consumption) * price)
-      );
-
-      const grafo: Grafo = {
-        vertices,
-        matrizAdjacencia: costMatrix,
-      };
-
-      const resultCore = executeChristofidesAlgorithm(grafo);
-      
-      setResultado({
-        grafo,
-        ...resultCore
-      });
-
-    } catch (e) {
-      if (e instanceof Error) {
-        setErro(e.message);
-      } else {
-        setErro('Ocorreu um erro desconhecido.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [locations, fuelConsumption, gasPrice, setErro, setIsLoading, setResultado, setVisualizacaoAtiva]);
-
-  const handleClear = useCallback(() => {
-    setLocations([]);
-    setNewLocation('');
-    setSuggestions([]);
-    clearResultado();
-  }, [clearResultado]);
-
 
   return (
     <div className="bg-neutral-800 p-6 rounded-xl shadow-lg">
@@ -251,14 +180,14 @@ export const PracticalPlanner: React.FC<PracticalPlannerProps> = ({
 
       <div className="flex flex-col sm:flex-row gap-4">
         <button
-          onClick={handleSolve}
+          onClick={onSolve}
           disabled={isLoading || locations.length < 3}
           className="flex-1 bg-brand-secondary hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 disabled:bg-neutral-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isLoading ? 'Calculando...' : 'Encontrar Rota Otimizada'}
         </button>
         <button
-          onClick={handleClear}
+          onClick={onClear}
           disabled={isLoading}
           className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300 disabled:opacity-50"
         >

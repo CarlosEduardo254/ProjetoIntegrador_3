@@ -1,9 +1,11 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import type { ResultadoChristofides } from '../types.ts';
-import { getMultipleRoutePathGeometries } from '../services/geminiService.ts';
+import type { ResultadoChristofides } from '../types';
+import { getMultipleRoutePathGeometries } from '../services/locationService';
+
+type LatLngTuple = [number, number];
 
 const createNumberedIcon = (number: number) => {
   const style = `
@@ -37,8 +39,7 @@ const LoadingOverlay: React.FC = () => (
     </div>
 );
 
-// Helper component to adjust map bounds using the useMap hook
-const MapBoundsController: React.FC<{ bounds: L.LatLngBounds }> = ({ bounds }) => {
+const MapBoundsController: React.FC<{ bounds: any }> = ({ bounds }) => {
     const map = useMap();
     useEffect(() => {
         if (bounds.isValid()) {
@@ -48,14 +49,13 @@ const MapBoundsController: React.FC<{ bounds: L.LatLngBounds }> = ({ bounds }) =
     return null;
 };
 
-// Helper component to draw a polyline with directional arrows
 const PolylineWithArrows: React.FC<{
-  path: [number, number][];
-  pathOptions: L.PathOptions;
+  path: LatLngTuple[];
+  pathOptions: any;
   decoratorLoaded: boolean;
 }> = ({ path, pathOptions, decoratorLoaded }) => {
   const map = useMap();
-  const [polyline, setPolyline] = useState<L.Polyline | null>(null);
+  const [polyline, setPolyline] = useState<any | null>(null);
 
   useEffect(() => {
     if (!polyline || !decoratorLoaded) return;
@@ -63,8 +63,8 @@ const PolylineWithArrows: React.FC<{
     const decorator = (L as any).polylineDecorator(polyline, {
       patterns: [
         {
-          offset: '20%', // Start arrows a bit away from the marker
-          repeat: '100px', // Space out arrows
+          offset: '20%', // Começa as setas um pouco longe do marcador
+          repeat: '100px', // Espaça as setas
           symbol: (L as any).Symbol.arrowHead({
             pixelSize: 12,
             polygon: false,
@@ -86,21 +86,19 @@ const PolylineWithArrows: React.FC<{
     };
   }, [map, polyline, decoratorLoaded, pathOptions.color]);
 
-  return <Polyline ref={setPolyline} positions={path} pathOptions={pathOptions} />;
+  return <Polyline ref={setPolyline as React.Ref<any>} positions={path} pathOptions={pathOptions} />;
 };
 
 
 export const MapVisualizer: React.FC<{ resultado: ResultadoChristofides }> = ({ resultado }) => {
   const { grafo, cicloHamiltoniano } = resultado;
-  const [routePaths, setRoutePaths] = useState<[number, number][][] | null>(null);
+  const [routePaths, setRoutePaths] = useState<LatLngTuple[][] | null>(null);
   const [isLoadingPaths, setIsLoadingPaths] = useState(true);
   const [decoratorLoaded, setDecoratorLoaded] = useState(!!(L as any).polylineDecorator);
 
-  // Effect to load the decorator plugin
   useEffect(() => {
     if (decoratorLoaded) return;
 
-    // Expose L globally for the non-module plugin to find it
     (window as any).L = L;
 
     const script = document.createElement('script');
@@ -145,12 +143,12 @@ export const MapVisualizer: React.FC<{ resultado: ResultadoChristofides }> = ({ 
         // Chama a nova função da API uma única vez
         const pathsObject = await getMultipleRoutePathGeometries(tourForApi);
         
-        const resolvedPaths = [];
+        const resolvedPaths: LatLngTuple[][] = [];
         // Constrói a matriz de caminhos a partir do objeto retornado
         for (let i = 0; i < caminho.length - 1; i++) {
           const key = `${i}-${i + 1}`;
           if (pathsObject[key] && pathsObject[key].length > 0) {
-            resolvedPaths.push(pathsObject[key]);
+            resolvedPaths.push(pathsObject[key] as LatLngTuple[]);
           } else {
             console.warn(`Nenhum caminho encontrado para o segmento ${key}, desenhando linha reta.`);
             const v1 = grafo.vertices.find(v => v.id === caminho[i])!;
@@ -163,7 +161,7 @@ export const MapVisualizer: React.FC<{ resultado: ResultadoChristofides }> = ({ 
 
       } catch (error) {
         console.error("Falha ao buscar os caminhos da rota, desenhando linhas retas como fallback:", error);
-        const fallbackPaths = [];
+        const fallbackPaths: LatLngTuple[][] = [];
         for (let i = 0; i < caminho.length - 1; i++) {
           const v1 = grafo.vertices.find(v => v.id === caminho[i])!;
           const v2 = grafo.vertices.find(v => v.id === caminho[i+1])!;
@@ -199,12 +197,12 @@ export const MapVisualizer: React.FC<{ resultado: ResultadoChristofides }> = ({ 
   
   const positions = grafo.vertices.map(v => ({
     id: v.id,
-    position: [v.y, v.x] as [number, number],
+    position: [v.y, v.x] as LatLngTuple,
     name: v.nome,
   }));
     
   const bounds = L.latLngBounds(positions.map(p => p.position));
-  const center = bounds.isValid() ? bounds.getCenter() : L.latLng(0, 0);
+  const center: LatLngTuple = bounds.isValid() ? [bounds.getCenter().lat, bounds.getCenter().lng] : [0, 0];
 
   return (
     <div className="relative w-full h-full">

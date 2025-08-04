@@ -1,8 +1,11 @@
+declare module 'leaflet';
+declare module 'react-leaflet';
+
 export interface Vertice {
   id: number;
   x: number;
   y: number;
-  nome?: string; // Optional name for practical application
+  nome?: string;
 }
 
 export interface Aresta {
@@ -28,7 +31,6 @@ export interface ResultadoChristofides {
   };
 }
 
-// Types for Gemini Service
 export interface LocationData {
     name: string;
     lat: number;

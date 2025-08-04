@@ -1,11 +1,9 @@
 
-import type { DistanceMatrixResponse, LocationData } from '../types.ts';
+import type { DistanceMatrixResponse, LocationData } from '../types';
 
-// This service uses the Photon API for geocoding and the OSRM API for routing.
 const PHOTON_API_BASE = 'https://photon.komoot.io';
 const OSRM_API_BASE = 'https://router.project-osrm.org';
 
-// Helper to format a Photon API feature into a readable address string.
 function formatPhotonFeature(feature: any): string {
     const props = feature.properties;
     const addressParts = [
@@ -14,9 +12,8 @@ function formatPhotonFeature(feature: any): string {
         props.city,
         props.state,
         props.country,
-    ].filter(Boolean); // Filter out null/undefined/empty values
+    ].filter(Boolean);
 
-    // Remove duplicates which can sometimes occur (e.g., name is the same as city)
     const uniqueParts = [...new Set(addressParts)];
     
     return uniqueParts.join(', ');
@@ -30,7 +27,6 @@ export async function getLocationSuggestions(query: string): Promise<string[]> {
     const url = new URL(`${PHOTON_API_BASE}/api/`);
     url.searchParams.set('q', query);
     url.searchParams.set('limit', '5');
-    // Bias results towards São Paulo, Brazil to improve relevance for local searches.
     url.searchParams.set('lat', '-23.55');
     url.searchParams.set('lon', '-46.63');
 
@@ -45,7 +41,7 @@ export async function getLocationSuggestions(query: string): Promise<string[]> {
         return data.features.map(formatPhotonFeature);
     } catch (error) {
         console.error("Error fetching location suggestions from Photon:", error);
-        return []; // Return empty on error to avoid breaking the UI
+        return [];
     }
 }
 
@@ -54,7 +50,6 @@ async function geocodeAddress(address: string): Promise<LocationData | null> {
     const url = new URL(`${PHOTON_API_BASE}/api/`);
     url.searchParams.set('q', address);
     url.searchParams.set('limit', '1');
-    // Bias results towards São Paulo, Brazil.
     url.searchParams.set('lat', '-23.55');
     url.searchParams.set('lon', '-46.63');
 
@@ -66,7 +61,7 @@ async function geocodeAddress(address: string): Promise<LocationData | null> {
             const feature = data.features[0];
             const [lon, lat] = feature.geometry.coordinates;
             return {
-                name: address, // Use the original user-provided address for cleaner display
+                name: address, 
                 lat: lat,
                 lon: lon,
             };
@@ -84,13 +79,11 @@ export async function getDistanceMatrixForLocations(addresses: string[]): Promis
     }
 
     const geocodedLocations: LocationData[] = [];
-    // Use a for...of loop to process geocoding requests sequentially.
     for (const address of addresses) {
         const locationData = await geocodeAddress(address);
         if (locationData) {
             geocodedLocations.push(locationData);
         } else {
-            // This error is displayed to the user.
             throw new Error(`Não foi possível encontrar as coordenadas para o endereço: "${address}". Tente ser mais específico.`);
         }
     }
@@ -114,7 +107,6 @@ export async function getDistanceMatrixForLocations(addresses: string[]): Promis
             throw new Error("A API de roteamento retornou uma resposta inválida.");
         }
         
-        // OSRM returns distances in meters. Convert to kilometers.
         const distanceMatrixKm = data.distances.map((row: number[]) => 
             row.map((dist: number) => dist === null ? Infinity : dist / 1000)
         );
@@ -133,7 +125,6 @@ export async function getDistanceMatrixForLocations(addresses: string[]): Promis
 export async function getMultipleRoutePathGeometries(orderedTour: { name: string, lat: number, lon: number }[]): Promise<Record<string, [number, number][]>> {
     const result: Record<string, [number, number][]> = {};
 
-    // Process segments sequentially to respect potential API limits
     for (let i = 0; i < orderedTour.length - 1; i++) {
         const from = orderedTour[i];
         const to = orderedTour[i+1];
@@ -154,7 +145,6 @@ export async function getMultipleRoutePathGeometries(orderedTour: { name: string
             const data = await response.json();
             if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
                 const routeGeometry = data.routes[0].geometry.coordinates;
-                // OSRM returns [lon, lat], Leaflet's Polyline needs [lat, lon].
                 const leafletPath = routeGeometry.map((coord: [number, number]) => [coord[1], coord[0]]);
                 result[segmentKey] = leafletPath;
             } else {

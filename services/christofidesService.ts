@@ -1,5 +1,5 @@
 
-import type { Grafo, Aresta, ResultadoChristofides } from '../types.ts';
+import type { Grafo, Aresta, ResultadoChristofides } from '../types';
 
 function parseInput(texto: string): Grafo {
   const linhas = texto.trim().split('\n');
@@ -81,7 +81,7 @@ function emparelhamentoPerfeitoCustoMinimo(verticesImpares: number[], matriz: nu
   const naoEmparelhados = new Set(verticesImpares);
 
   while (naoEmparelhados.size > 0) {
-    const u = naoEmparelhados.values().next().value;
+    const u = naoEmparelhados.values().next().value!;
     naoEmparelhados.delete(u);
 
     let vMaisProximo = -1;
@@ -98,7 +98,6 @@ function emparelhamentoPerfeitoCustoMinimo(verticesImpares: number[], matriz: nu
       emparelhamento.push({ de: u, para: vMaisProximo, peso: menorDistancia });
       naoEmparelhados.delete(vMaisProximo);
     } else if (naoEmparelhados.size > 0) {
-        // This case should ideally not be reached in a complete graph
         throw new Error("Não foi possível encontrar um par para todos os vértices de grau ímpar.");
     }
   }

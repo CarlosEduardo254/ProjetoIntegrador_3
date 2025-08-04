@@ -8,22 +8,22 @@ interface GraphVisualizerProps {
 }
 
 const StrokeColors = {
-  default: '#4B5563', // neutral-600
-  agm: '#10B981', // green-500
-  emparelhamento: '#F59E0B', // amber-500
-  final: '#3B82F6', // brand-secondary
+  default: '#4B5563', 
+  agm: '#10B981', 
+  emparelhamento: '#F59E0B', 
+  final: '#3B82F6', 
 };
 
 function projectCoordinates(vertices: Vertice[]): Vertice[] {
     if (vertices.length === 0 || !vertices[0].nome) {
-        return vertices; // It's the original circular layout, no projection needed.
+        return vertices;
     }
 
     const PADDING = 60;
     const VIEW_WIDTH = 600 - PADDING * 2;
     const VIEW_HEIGHT = 600 - PADDING * 2;
     
-    // Using x for lon, y for lat as set in PracticalPlanner
+  
     const lons = vertices.map(v => v.x);
     const lats = vertices.map(v => v.y);
     
@@ -41,7 +41,7 @@ function projectCoordinates(vertices: Vertice[]): Vertice[] {
 
     const scaleX = lonRange > 0 ? VIEW_WIDTH / lonRange : 1;
     const scaleY = latRange > 0 ? VIEW_HEIGHT / latRange : 1;
-    const scale = Math.min(scaleX, scaleY) * 0.9; // Add some extra margin
+    const scale = Math.min(scaleX, scaleY) * 0.9; 
 
     const centerX = (minLon + maxLon) / 2;
     const centerY = (minLat + maxLat) / 2;

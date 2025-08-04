@@ -1,14 +1,15 @@
 
 import React, { useState, useCallback } from 'react';
-import { GRAFO_EXEMPLO } from './constants.ts';
-import type { ResultadoChristofides } from './types.ts';
-import { resolverChristofides } from './services/christofidesService.ts';
-import { GraphVisualizer } from './components/GraphVisualizer.tsx';
-import { ControlPanel } from './components/ControlPanel.tsx';
-import { ResultsPanel } from './components/ResultsPanel.tsx';
-import { LoadingSpinner } from './components/LoadingSpinner.tsx';
-import { PracticalPlanner } from './components/PracticalPlanner.tsx';
-import { MapVisualizer } from './components/MapVisualizer.tsx';
+import { GRAFO_EXEMPLO } from './constants';
+import type { ResultadoChristofides, DistanceMatrixResponse, Grafo, Vertice } from './types';
+import { resolverChristofides, executeChristofidesAlgorithm } from './services/christofidesService';
+import { getDistanceMatrixForLocations } from './services/locationService';
+import { GraphVisualizer } from './components/GraphVisualizer';
+import { ControlPanel } from './components/ControlPanel';
+import { ResultsPanel } from './components/ResultsPanel';
+import { LoadingSpinner } from './components/LoadingSpinner';
+import { PracticalPlanner } from './components/PracticalPlanner';
+import { MapVisualizer } from './components/MapVisualizer';
 
 const TabButton: React.FC<{title: string, isActive: boolean, onClick: () => void, disabled: boolean}> = ({ title, isActive, onClick, disabled }) => (
     <button
@@ -23,43 +24,118 @@ const TabButton: React.FC<{title: string, isActive: boolean, onClick: () => void
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<'solver' | 'practical'>('solver');
-  const [inputText, setInputText] = useState<string>(GRAFO_EXEMPLO);
-  const [resultado, setResultado] = useState<ResultadoChristofides | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [visualizacaoAtiva, setVisualizacaoAtiva] = useState<string>('final');
+
+  const [inputText, setInputText] = useState<string>(GRAFO_EXEMPLO);
+  const [matrixResult, setMatrixResult] = useState<ResultadoChristofides | null>(null);
+  const [matrixError, setMatrixError] = useState<string | null>(null);
+  const [matrixViz, setMatrixViz] = useState<string>('final');
+
+  const [locations, setLocations] = useState<string[]>([
+    'Avenida Carlos Roberto Costa, Iguatu, Ceará',
+    'Rua Arnóbio Bacelar Caneca, Juazeiro do Norte, Ceará',
+    'Rua do Flamengo, Campos Sales, Ceará',
+    'Avenida Odilon Aguiar, Tauá, Ceará',
+    'Avenida Beira Rio, Mombaça, Ceará',
+  ]);
+  const [fuelConsumption, setFuelConsumption] = useState('12');
+  const [gasPrice, setGasPrice] = useState('5.50');
+  const [practicalResult, setPracticalResult] = useState<ResultadoChristofides | null>(null);
+  const [practicalError, setPracticalError] = useState<string | null>(null);
+  const [practicalViz, setPracticalViz] = useState<string>('final');
+  
 
   const handleSolveMatrix = useCallback(async () => {
     setIsLoading(true);
-    setErro(null);
-    setResultado(null);
-    setVisualizacaoAtiva('final');
+    setMatrixError(null);
+    setMatrixResult(null);
+    setMatrixViz('final');
 
     try {
       await new Promise(resolve => setTimeout(resolve, 50));
       const res = resolverChristofides(inputText);
-      setResultado(res);
+      setMatrixResult(res);
     } catch (e) {
       if (e instanceof Error) {
-        setErro(e.message);
+        setMatrixError(e.message);
       } else {
-        setErro('Ocorreu um erro desconhecido.');
+        setMatrixError('Ocorreu um erro desconhecido.');
       }
     } finally {
       setIsLoading(false);
     }
   }, [inputText]);
+  
+  const handleSolvePractical = useCallback(async () => {
+    if (locations.length < 3) {
+      setPracticalError("Adicione pelo menos 3 locais para calcular uma rota.");
+      return;
+    }
+    const consumption = parseFloat(fuelConsumption);
+    const price = parseFloat(gasPrice);
 
-  const handleClear = useCallback(() => {
+    if (isNaN(consumption) || consumption <= 0 || isNaN(price) || price <= 0) {
+      setPracticalError("Valores inválidos para consumo ou preço da gasolina. Verifique se são números positivos.");
+      return;
+    }
+
+    setIsLoading(true);
+    setPracticalError(null);
+    setPracticalResult(null);
+    setPracticalViz('final');
+
+    try {
+      const apiResponse: DistanceMatrixResponse = await getDistanceMatrixForLocations(locations);
+      
+      const vertices: Vertice[] = apiResponse.locations.map((loc, i) => ({
+        id: i,
+        x: loc.lon,
+        y: loc.lat,
+        nome: loc.name,
+      }));
+      
+      const costMatrix = apiResponse.distanceMatrix.map(row => 
+        row.map(distanceInKm => (distanceInKm / consumption) * price)
+      );
+
+      const grafo: Grafo = {
+        vertices,
+        matrizAdjacencia: costMatrix,
+      };
+
+      const resultCore = executeChristofidesAlgorithm(grafo);
+      
+      setPracticalResult({
+        grafo,
+        ...resultCore
+      });
+
+    } catch (e) {
+      if (e instanceof Error) {
+        setPracticalError(e.message);
+      } else {
+        setPracticalError('Ocorreu um erro desconhecido.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [locations, fuelConsumption, gasPrice]);
+
+  const handleClearMatrix = useCallback(() => {
     setInputText('');
-    setResultado(null);
-    setErro(null);
-    setIsLoading(false);
-    setVisualizacaoAtiva('final');
+    setMatrixResult(null);
+    setMatrixError(null);
+    setMatrixViz('final');
+  }, []);
+
+  const handleClearPractical = useCallback(() => {
+    setLocations([]);
+    setPracticalResult(null);
+    setPracticalError(null);
+    setPracticalViz('final');
   }, []);
   
   const handleModeChange = (newMode: 'solver' | 'practical') => {
-      handleClear();
       setMode(newMode);
   }
 
@@ -70,22 +146,30 @@ const App: React.FC = () => {
           inputText={inputText}
           setInputText={setInputText}
           onSolve={handleSolveMatrix}
-          onClear={handleClear}
+          onClear={handleClearMatrix}
           isLoading={isLoading}
         />
       );
     }
     return (
         <PracticalPlanner
-          setResultado={setResultado}
-          setErro={setErro}
-          setIsLoading={setIsLoading}
+          locations={locations}
+          setLocations={setLocations}
+          fuelConsumption={fuelConsumption}
+          setFuelConsumption={setFuelConsumption}
+          gasPrice={gasPrice}
+          setGasPrice={setGasPrice}
+          onSolve={handleSolvePractical}
+          onClear={handleClearPractical}
           isLoading={isLoading}
-          clearResultado={handleClear}
-          setVisualizacaoAtiva={setVisualizacaoAtiva}
         />
     );
   };
+  
+  const activeResult = mode === 'solver' ? matrixResult : practicalResult;
+  const activeError = mode === 'solver' ? matrixError : practicalError;
+  const activeViz = mode === 'solver' ? matrixViz : practicalViz;
+  const setActiveViz = mode === 'solver' ? setMatrixViz : setPracticalViz;
 
   return (
     <div className="min-h-screen bg-neutral-900 font-sans text-neutral-100 p-4 sm:p-6 lg:p-8">
@@ -107,29 +191,29 @@ const App: React.FC = () => {
         <main className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="flex flex-col gap-6">
             {renderActivePanel()}
-            {erro && (
+            {activeError && (
               <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg" role="alert">
                 <strong className="font-bold">Erro: </strong>
-                <span className="block sm:inline">{erro}</span>
+                <span className="block sm:inline">{activeError}</span>
               </div>
             )}
             {isLoading && <LoadingSpinner />}
-            {resultado && !isLoading && (
+            {activeResult && !isLoading && (
               <ResultsPanel 
-                resultado={resultado} 
-                visualizacaoAtiva={visualizacaoAtiva}
-                setVisualizacaoAtiva={setVisualizacaoAtiva}
+                resultado={activeResult} 
+                visualizacaoAtiva={activeViz}
+                setVisualizacaoAtiva={setActiveViz}
               />
             )}
           </div>
 
           <div className="bg-neutral-800 rounded-xl shadow-2xl overflow-hidden min-h-[400px] lg:min-h-[600px] flex items-center justify-center sticky top-8">
-             {mode === 'practical' && resultado && visualizacaoAtiva === 'final' ? (
-                <MapVisualizer resultado={resultado} />
+             {mode === 'practical' && practicalResult && activeViz === 'final' ? (
+                <MapVisualizer resultado={practicalResult} />
               ) : (
                 <GraphVisualizer 
-                  resultado={resultado}
-                  visualizacaoAtiva={visualizacaoAtiva}
+                  resultado={activeResult}
+                  visualizacaoAtiva={activeViz}
                 />
               )}
           </div>
