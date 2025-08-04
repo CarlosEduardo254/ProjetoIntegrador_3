@@ -58,7 +58,6 @@ const PolylineWithArrows: React.FC<{
   const [polyline, setPolyline] = useState<L.Polyline | null>(null);
 
   useEffect(() => {
-    // Ensure plugin is loaded and polyline instance exists
     if (!polyline || !decoratorLoaded) return;
 
     const decorator = (L as any).polylineDecorator(polyline, {
