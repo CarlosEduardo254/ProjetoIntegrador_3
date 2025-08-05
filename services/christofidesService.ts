@@ -77,32 +77,44 @@ function encontrarVerticesGrauImpar(agm: Aresta[], numVertices: number): number[
 }
 
 function emparelhamentoPerfeitoCustoMinimo(verticesImpares: number[], matriz: number[][]): Aresta[] {
-  const emparelhamento: Aresta[] = [];
-  const naoEmparelhados = new Set(verticesImpares);
-
-  while (naoEmparelhados.size > 0) {
-    const u = naoEmparelhados.values().next().value!;
-    naoEmparelhados.delete(u);
-
-    let vMaisProximo = -1;
-    let menorDistancia = Infinity;
-
-    for (const v of naoEmparelhados) {
-      if (matriz[u][v] < menorDistancia) {
-        menorDistancia = matriz[u][v];
-        vMaisProximo = v;
-      }
-    }
-
-    if (vMaisProximo !== -1) {
-      emparelhamento.push({ de: u, para: vMaisProximo, peso: menorDistancia });
-      naoEmparelhados.delete(vMaisProximo);
-    } else if (naoEmparelhados.size > 0) {
-        throw new Error("Não foi possível encontrar um par para todos os vértices de grau ímpar.");
+  // Se não houver vértices para emparelhar, retorne um array vazio.
+  if (verticesImpares.length === 0) {
+    return [];
+  }
+  
+  const arestasPossiveis: Aresta[] = [];
+  // Gera todas as arestas possíveis entre os vértices de grau ímpar.
+  for (let i = 0; i < verticesImpares.length; i++) {
+    for (let j = i + 1; j < verticesImpares.length; j++) {
+      const u = verticesImpares[i];
+      const v = verticesImpares[j];
+      arestasPossiveis.push({ de: u, para: v, peso: matriz[u][v] });
     }
   }
+
+  // Ordena as arestas pelo menor peso.
+  arestasPossiveis.sort((a, b) => a.peso - b.peso);
+
+  const emparelhamento: Aresta[] = [];
+  const emparelhados = new Set<number>();
+  
+  // Itera sobre as arestas ordenadas e seleciona as de menor custo que não envolvam vértices já emparelhados.
+  for (const aresta of arestasPossiveis) {
+    // Se todos os vértices já estiverem emparelhados, podemos parar.
+    if (emparelhados.size === verticesImpares.length) {
+        break;
+    }
+    
+    if (!emparelhados.has(aresta.de) && !emparelhados.has(aresta.para)) {
+      emparelhamento.push(aresta);
+      emparelhados.add(aresta.de);
+      emparelhados.add(aresta.para);
+    }
+  }
+
   return emparelhamento;
 }
+
 
 function encontrarCicloEuleriano(multigrafo: Aresta[], numVertices: number, inicio: number): number[] {
   const adj: Map<number, number[]> = new Map();

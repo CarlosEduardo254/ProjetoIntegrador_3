@@ -1,6 +1,3 @@
-declare module 'leaflet';
-declare module 'react-leaflet';
-
 export interface Vertice {
   id: number;
   x: number;
